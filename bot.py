@@ -182,9 +182,9 @@ def create_translation_embed(query, data, page_index=1):
         description=f"{len(data['data'])}{'+' if len(data['data']) >= TRANSLATE_API_MAX_RESULTS else ''} result{'s' if len(data['data']) > 1 else ''} found:",
         color=discord.Color.green())
 
-    limit_per_page = min(len(data['data']), SEARCH_RESULTS_LIMIT_PER_PAGE)
-    is_only_one_page = (len(data['data'])  - 1) // SEARCH_RESULTS_LIMIT_PER_PAGE == 0
-    for i in range((page_index - 1) * SEARCH_RESULTS_LIMIT_PER_PAGE, (page_index - 1) * SEARCH_RESULTS_LIMIT_PER_PAGE + limit_per_page):
+    max_visible_results_on_page = min(len(data['data']) - ((page_index - 1) * SEARCH_RESULTS_LIMIT_PER_PAGE), SEARCH_RESULTS_LIMIT_PER_PAGE)
+    is_only_one_page = (len(data['data']) - 1) // SEARCH_RESULTS_LIMIT_PER_PAGE == 0
+    for i in range((page_index - 1) * SEARCH_RESULTS_LIMIT_PER_PAGE, (page_index - 1) * SEARCH_RESULTS_LIMIT_PER_PAGE + max_visible_results_on_page):
         result = data['data'][i]
 
         if 'word' in result['japanese'][0]:
@@ -211,7 +211,7 @@ def create_translation_embed(query, data, page_index=1):
         embed_value_intro = '\n'.join(filter(None, [f"{japanese_word} {'[{0}]'.format(reading) if reading is not None else ''}", additional_info]))
         embed_value_results = '\n'.join(english_definitions)
         embed_value = f"```{embed_value_intro}\n{embed_value_results}```"
-        if i < limit_per_page - 1:
+        if i < max_visible_results_on_page - 1:
             embed_value += '\n\u200B'
         embed.add_field(name=embed_name, value=embed_value,
                         inline=False)
