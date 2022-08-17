@@ -11,6 +11,16 @@ import shutil
 
 SEARCH_RESULTS_LIMIT_PER_PAGE = 5
 JISHO_IN_KANA_ALONE_TEXT = "Usually written using kana alone"
+
+SENSE_DETAILS_MAP = {"parts_of_speech": "Parts of speech",
+                  "links": "Links",
+                  "tags": "Tags",
+                  "restrictions": "Restrictions",
+                  "see_also": "See also",
+                  "antonyms": "Antonyms",
+                  "source": "Source",
+                  "info": "Info"}
+
 TMP_FOLDER = os.path.join(tempfile.gettempdir(), 'discord_jisho_bot')
 
 SEARCH_API_MAX_RESULTS = 10
@@ -32,7 +42,7 @@ async def on_ready():
 async def on_message(message):
     await bot.process_commands(message)
 
-@bot.command(name='translate', description="Translation", brief="Translates a Japanese word to English", help='Translates a Japanese word to English\n[args...]:\t[(-page|-p) page_number]', aliases=['t'])
+@bot.command(name='translate', description="Translation", brief="Translates a Japanese word to English", help='Translates a Japanese word to English\n[args...]:\t[(-page|-p) page_number] [-d|-detail|-details]', aliases=['t'])
 async def translate(ctx, query: str, *args):
     print(f"{ctx.message.author.name} wrote: {ctx.message.content}")
     if query is None:
@@ -41,6 +51,7 @@ async def translate(ctx, query: str, *args):
 
     options = parse_translate_options(args)
     page = options['page']
+    details = options['details']
 
     jisho_request_url = f"https://jisho.org/api/v1/search/words?keyword=\"{urllib.parse.quote(query)}\""
     print(f"Request: {jisho_request_url}")
@@ -74,19 +85,20 @@ async def translate(ctx, query: str, *args):
         print(f'URLError: {e.reason}')
         return
 
-    embed = create_translation_embed(query, data, page_index=page)
+    embed = create_translation_embed(query, data, page_index=page, show_details=details)
     await ctx.channel.send(embed=embed)
 
 
-@bot.command(name='search', description="Search", brief="Search for a word", help='Search for a word\n[args...]:\t[(-page|-p) page_number]', aliases=['s'])
+@bot.command(name='search', description="Search", brief="Search for a word", help='Search for a word\n[args...]:\t[(-page|-p) page_number] [-d|-detail|-details]', aliases=['s'])
 async def search(ctx, query: str, *args):
     print(f"{ctx.message.author.name} wrote: {ctx.message.content}")
     if query is None:
         print('No arguments given!')
         return
 
-    options = parse_translate_options(args)
+    options = parse_search_options(args)
     page = options['page']
+    details = options['details']
 
     jisho_request_url = f"https://jisho.org/api/v1/search/words?keyword={urllib.parse.quote(query)}"
     print(f"Request: {jisho_request_url}")
@@ -104,7 +116,8 @@ async def search(ctx, query: str, *args):
                 # Remove Wikipedia entries
                 for datum in data['data']:
                     if isinstance(datum['attribution']['dbpedia'], str):
-                        datum['senses'] = [sense for sense in datum['senses'] if "Wikipedia definition" not in sense['parts_of_speech']]
+                        datum['senses'] = [sense for sense in datum['senses']
+                                           if "Wikipedia definition" not in sense['parts_of_speech']]
 
                 if any([len(datum['senses']) == 0 for datum in data['data']]):
                     data['data'] = [datum for datum in data['data'] if len(datum['senses']) > 0]
@@ -120,7 +133,7 @@ async def search(ctx, query: str, *args):
         print(f'URLError: {e.reason}')
         return
 
-    embed = create_search_embed(query, data, page_index=page)
+    embed = create_search_embed(query, data, page_index=page, show_details=details)
     await ctx.channel.send(embed=embed)
 
 
@@ -137,7 +150,8 @@ async def clear_cache(ctx):
 
 
 def parse_translate_options(options):
-    page = 1 # default value
+    page = 1  # default value
+    show_details = False
 
     option_index = 0
     while option_index < len(options):
@@ -148,10 +162,15 @@ def parse_translate_options(options):
                 print("Missing argument!")
                 return
             option_index = option_index + 2
-    return {'page': page}
+        elif options[option_index] in ["-d", "-detail", "-details"]:
+            show_details = True
+            option_index = option_index + 1
+    return {'page': page, 'details': show_details}
+
 
 def parse_search_options(options):
-    page = 1 # default value
+    page = 1  # default value
+    show_details = False
 
     option_index = 0
     while option_index < len(options):
@@ -162,10 +181,13 @@ def parse_search_options(options):
                 print("Missing argument!")
                 return
             option_index = option_index + 2
-    return {'page': page}
+        elif options[option_index] in ["-d", "-detail", "-details"]:
+            show_details = True
+            option_index = option_index + 1
+    return {'page': page, 'details': show_details}
 
 
-def create_translation_embed(query, data, page_index=1):
+def create_translation_embed(query, data, page_index=1, show_details=False):
     if len(data['data']) == 0:
         return discord.Embed(
             title=f"Translations of {query}",
@@ -194,20 +216,32 @@ def create_translation_embed(query, data, page_index=1):
             japanese_word = result['japanese'][0]['reading']
             reading = None
 
-        english_definitions = [f"{index + 1}.\t{', '.join(sense['english_definitions'])}"
-                               if len(result['senses']) > 1
-                               else f"  \t{', '.join(sense['english_definitions'])}"
-                               for index, sense in
-                               enumerate(result['senses'])]
+        if show_details:
+            more_details_per_english_definition_lst = more_details_per_english_definition(result)
+
+            english_definitions = [
+                f"{index + 1}.\t{', '.join(sense['english_definitions'])}\n{more_details_per_english_definition_lst[index]}\n"
+                if len(result['senses']) > 1
+                else f"  \t{', '.join(sense['english_definitions'])}"
+                for index, sense in
+                enumerate(result['senses'])]
+        else:
+            english_definitions = [f"{index + 1}.\t{', '.join(sense['english_definitions'])}"
+                                   if len(result['senses']) > 1
+                                   else f"  \t{', '.join(sense['english_definitions'])}"
+                                   for index, sense in
+                                   enumerate(result['senses'])]
         additional_info = None
 
-        if JISHO_IN_KANA_ALONE_TEXT in result['senses'][0]['tags']:
+        if JISHO_IN_KANA_ALONE_TEXT in result['senses'][0]['tags'] and not show_details:
             additional_info = "*Usually in Kana alone*"
 
         if len(data['data']) == 1:
             embed_name = f"{japanese_word}"
         else:
             embed_name = f"{i + 1}. {japanese_word}"
+        if show_details:
+            embed_name += more_details_per_japanese_word(result)
         embed_value_intro = '\n'.join(filter(None, [f"{japanese_word} {'[{0}]'.format(reading) if reading is not None else ''}", additional_info]))
         embed_value_results = '\n'.join(english_definitions)
         embed_value = f"```{embed_value_intro}\n{embed_value_results}```"
@@ -217,12 +251,13 @@ def create_translation_embed(query, data, page_index=1):
                         inline=False)
 
     if is_only_one_page:
-        embed.set_footer(text=f"Retrieved from jisho.org")
+        embed.set_footer(text=f"Data provided by jisho.org")
     else:
         embed.set_footer(text=f"Page {page_index}/{((len(data['data']) - 1) // SEARCH_RESULTS_LIMIT_PER_PAGE) + 1}\nRetrieved from jisho.org")
     return embed
 
-def create_search_embed(query, data, page_index=1):
+
+def create_search_embed(query, data, page_index=1, show_details=False):
     if len(data['data']) == 0:
         return discord.Embed(
             title=f"Searching for {query}",
@@ -251,20 +286,32 @@ def create_search_embed(query, data, page_index=1):
             japanese_word = result['japanese'][0]['reading']
             reading = None
 
-        english_definitions = [f"{index + 1}.\t{', '.join(sense['english_definitions'])}"
-                               if len(result['senses']) > 1
-                               else f"  \t{', '.join(sense['english_definitions'])}"
-                               for index, sense in
-                               enumerate(result['senses'])]
+        if show_details:
+            more_details_per_english_definition_lst = more_details_per_english_definition(result)
+
+            english_definitions = [
+                f"{index + 1}.\t{', '.join(sense['english_definitions'])}\n{more_details_per_english_definition_lst[index]}\n"
+                if len(result['senses']) > 1
+                else f"  \t{', '.join(sense['english_definitions'])}"
+                for index, sense in
+                enumerate(result['senses'])]
+        else:
+            english_definitions = [f"{index + 1}.\t{', '.join(sense['english_definitions'])}"
+                                   if len(result['senses']) > 1
+                                   else f"  \t{', '.join(sense['english_definitions'])}"
+                                   for index, sense in
+                                   enumerate(result['senses'])]
         additional_info = None
 
-        if JISHO_IN_KANA_ALONE_TEXT in result['senses'][0]['tags']:
+        if JISHO_IN_KANA_ALONE_TEXT in result['senses'][0]['tags'] and not show_details:
             additional_info = "*Usually in Kana alone*"
 
         if len(data['data']) == 1:
             embed_name = f"{japanese_word}"
         else:
             embed_name = f"{i + 1}. {japanese_word}"
+        if show_details:
+            embed_name += more_details_per_japanese_word(result)
         embed_value_intro = '\n'.join(filter(None, [f"{japanese_word} {'[{0}]'.format(reading) if reading is not None else ''}", additional_info]))
         embed_value_results = '\n'.join(english_definitions)
         embed_value = f"```{embed_value_intro}\n{embed_value_results}```"
@@ -274,9 +321,34 @@ def create_search_embed(query, data, page_index=1):
                         inline=False)
 
     if is_only_one_page:
-        embed.set_footer(text=f"Retrieved from jisho.org")
+        embed.set_footer(text=f"Data provided by jisho.org")
     else:
         embed.set_footer(text=f"Page {page_index}/{((len(data['data']) - 1) // SEARCH_RESULTS_LIMIT_PER_PAGE) + 1}\nRetrieved from jisho.org")
     return embed
 
-bot.run(TOKEN)
+
+def more_details_per_english_definition(result):
+    more_details = []
+    for sense in result['senses']:
+        details_of_sense = []
+        for key, value in sense.items():
+            if len(value) > 0 and key != 'english_definitions' and key != 'source':
+            # TODO consider "source", e.g. appearing with "-t ある -d"
+                spaces = ' ' * (16 - len(key))
+                details_of_sense.append(f"*\t  {SENSE_DETAILS_MAP[key]}:{spaces}{', '.join(value)}")
+        more_details.append('\n'.join(details_of_sense))
+    return more_details
+
+def more_details_per_japanese_word(result):
+    details_str = ""
+    if result['is_common']:
+        details_str += "\n[common]"
+    if len(result['jlpt']) > 0:
+        # only show lowest JLPT level
+        sorted_jlpt_lst = sorted(result['jlpt'], reverse=True)
+        details_str += f"\n[JLPT N{sorted_jlpt_lst[0][6]}]"
+    return details_str
+
+
+if __name__ == "__main__":
+    bot.run(TOKEN)
