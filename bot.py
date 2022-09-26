@@ -236,7 +236,7 @@ def create_translation_embed(query, data, page_index=1, show_details=False):
     if is_only_one_page:
         embed.set_footer(text=f"Data provided by jisho.org")
     else:
-        embed.set_footer(text=f"Page {page_index}/{((len(data['data']) - 1) // SEARCH_RESULTS_LIMIT_PER_PAGE) + 1}\nRetrieved from jisho.org")
+        embed.set_footer(text=f"Page {page_index}/{((len(data['data']) - 1) // SEARCH_RESULTS_LIMIT_PER_PAGE) + 1}\nData provided by jisho.org")
     return embed
 
 
@@ -306,7 +306,7 @@ def create_search_embed(query, data, page_index=1, show_details=False):
     if is_only_one_page:
         embed.set_footer(text=f"Data provided by jisho.org")
     else:
-        embed.set_footer(text=f"Page {page_index}/{((len(data['data']) - 1) // SEARCH_RESULTS_LIMIT_PER_PAGE) + 1}\nRetrieved from jisho.org")
+        embed.set_footer(text=f"Page {page_index}/{((len(data['data']) - 1) // SEARCH_RESULTS_LIMIT_PER_PAGE) + 1}\nData provided by jisho.org")
     return embed
 
 
