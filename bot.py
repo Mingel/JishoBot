@@ -203,7 +203,7 @@ def create_translation_embed(query, data, page_index=1, show_details=False):
             more_details_per_english_definition_lst = more_details_per_english_definition(result)
 
             english_definitions = [
-                f"{index + 1}.\t{', '.join(sense['english_definitions'])}\n{more_details_per_english_definition_lst[index]}\n"
+                f"{index + 1}.\t{', '.join(sense['english_definitions'])}\n[Kanji details](https://jisho.org/search/{japanese_word}%20%23kanji)\n{more_details_per_english_definition_lst[index]}\n"
                 if len(result['senses']) > 1
                 else f"  \t{', '.join(sense['english_definitions'])}"
                 for index, sense in
@@ -225,7 +225,7 @@ def create_translation_embed(query, data, page_index=1, show_details=False):
             embed_name = f"{i + 1}. {japanese_word}"
         if show_details:
             embed_name += more_details_per_japanese_word(result)
-        embed_value_intro = '\n'.join(filter(None, [f"{japanese_word} {'[{0}]'.format(reading) if reading is not None else ''}", additional_info]))
+        embed_value_intro = '\n'.join(filter(None, [f"[{japanese_word}](https://jisho.org/word/{japanese_word}) {'[{0}]'.format(reading) if reading is not None else ''}", additional_info]))
         embed_value_results = '\n'.join(english_definitions)
         embed_value = f"```{embed_value_intro}\n{embed_value_results}```"
         if i < max_visible_results_on_page - 1:
@@ -273,7 +273,7 @@ def create_search_embed(query, data, page_index=1, show_details=False):
             more_details_per_english_definition_lst = more_details_per_english_definition(result)
 
             english_definitions = [
-                f"{index + 1}.\t{', '.join(sense['english_definitions'])}\n{more_details_per_english_definition_lst[index]}\n"
+                f"{index + 1}.\t{', '.join(sense['english_definitions'])}\n[Kanji details](https://jisho.org/search/{japanese_word}%20%23kanji)\n{more_details_per_english_definition_lst[index]}\n"
                 if len(result['senses']) > 1
                 else f"  \t{', '.join(sense['english_definitions'])}"
                 for index, sense in
@@ -295,7 +295,7 @@ def create_search_embed(query, data, page_index=1, show_details=False):
             embed_name = f"{i + 1}. {japanese_word}"
         if show_details:
             embed_name += more_details_per_japanese_word(result)
-        embed_value_intro = '\n'.join(filter(None, [f"{japanese_word} {'[{0}]'.format(reading) if reading is not None else ''}", additional_info]))
+        embed_value_intro = '\n'.join(filter(None, [f"[{japanese_word}](https://jisho.org/word/{japanese_word}) {'[{0}]'.format(reading) if reading is not None else ''}", additional_info]))
         embed_value_results = '\n'.join(english_definitions)
         embed_value = f"```{embed_value_intro}\n{embed_value_results}```"
         if i < limit_per_page - 1:
