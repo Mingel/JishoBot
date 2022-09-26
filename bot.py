@@ -1,3 +1,4 @@
+import argparse
 import os
 import discord
 from discord.ext import commands
@@ -42,7 +43,7 @@ async def on_ready():
 async def on_message(message):
     await bot.process_commands(message)
 
-@bot.command(name='translate', description="Translation", brief="Translates a Japanese word to English", help='Translates a Japanese word to English\n[args...]:\t[(-page|-p) page_number] [-d|-detail|-details]', aliases=['t'])
+@bot.command(name='translate', description="Translation", brief="Translates a Japanese word to English", help='Translates a Japanese word to English\n[args...]:\t[-p PAGE_NUMBER] [-d]', aliases=['t'])
 async def translate(ctx, query: str, *args):
     print(f"{ctx.message.author.name} wrote: {ctx.message.content}")
     if query is None:
@@ -89,7 +90,7 @@ async def translate(ctx, query: str, *args):
     await ctx.channel.send(embed=embed)
 
 
-@bot.command(name='search', description="Search", brief="Search for a word", help='Search for a word\n[args...]:\t[(-page|-p) page_number] [-d|-detail|-details]', aliases=['s'])
+@bot.command(name='search', description="Search", brief="Search for a word", help='Search for a word\n[args...]:\t[-p PAGE_NUMBER] [-d]', aliases=['s'])
 async def search(ctx, query: str, *args):
     print(f"{ctx.message.author.name} wrote: {ctx.message.content}")
     if query is None:
@@ -150,41 +151,23 @@ async def clear_cache(ctx):
 
 
 def parse_translate_options(options):
-    page = 1  # default value
-    show_details = False
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-p", "--page", nargs='?', type=int, default=1)
+    parser.add_argument("-d", "--details", action='store_true')
 
-    option_index = 0
-    while option_index < len(options):
-        if options[option_index] in ["-p", "-page"]:
-            if option_index + 1 < len(options) and options[option_index + 1].isdigit():
-                page = int(options[option_index + 1])
-            else:
-                print("Missing argument!")
-                return
-            option_index = option_index + 2
-        elif options[option_index] in ["-d", "-detail", "-details"]:
-            show_details = True
-            option_index = option_index + 1
-    return {'page': page, 'details': show_details}
+    parsed_args = parser.parse_args(options)
+
+    return {'page': parsed_args.page, 'details': parsed_args.details}
 
 
 def parse_search_options(options):
-    page = 1  # default value
-    show_details = False
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-p", "--page", nargs='?', type=int, default=1)
+    parser.add_argument("-d", "--details", action='store_true')
 
-    option_index = 0
-    while option_index < len(options):
-        if options[option_index] in ["-p", "-page"]:
-            if option_index + 1 < len(options) and options[option_index + 1].isdigit():
-                page = int(options[option_index + 1])
-            else:
-                print("Missing argument!")
-                return
-            option_index = option_index + 2
-        elif options[option_index] in ["-d", "-detail", "-details"]:
-            show_details = True
-            option_index = option_index + 1
-    return {'page': page, 'details': show_details}
+    parsed_args = parser.parse_args(options)
+
+    return {'page': parsed_args.page, 'details': parsed_args.details}
 
 
 def create_translation_embed(query, data, page_index=1, show_details=False):
