@@ -51,6 +51,9 @@ async def translate(ctx, query: str, *args):
         return
 
     options = parse_translate_options(args)
+    if options is None:
+        print('Wrong options given!')
+        return
     page = options['page']
     details = options['details']
 
@@ -98,6 +101,9 @@ async def search(ctx, query: str, *args):
         return
 
     options = parse_search_options(args)
+    if options is None:
+        print('Wrong options given!')
+        return
     page = options['page']
     details = options['details']
 
@@ -155,7 +161,10 @@ def parse_translate_options(options):
     parser.add_argument("-p", "--page", nargs='?', type=int, default=1)
     parser.add_argument("-d", "--details", action='store_true')
 
-    parsed_args = parser.parse_args(options)
+    try:
+        parsed_args = parser.parse_args(options)
+    except:
+        return None
 
     return {'page': parsed_args.page, 'details': parsed_args.details}
 
@@ -165,7 +174,10 @@ def parse_search_options(options):
     parser.add_argument("-p", "--page", nargs='?', type=int, default=1)
     parser.add_argument("-d", "--details", action='store_true')
 
-    parsed_args = parser.parse_args(options)
+    try:
+        parsed_args = parser.parse_args(options)
+    except:
+        return None
 
     return {'page': parsed_args.page, 'details': parsed_args.details}
 
